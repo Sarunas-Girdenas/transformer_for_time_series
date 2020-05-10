@@ -90,8 +90,11 @@ def objective(trial):
             predictions = transformer(train_x)
             loss = criterion(predictions, train_y)
             epoch_loss += loss.item()
-            temp_train_auc += roc_auc_score(
-                train_y.numpy(), torch.exp(predictions)[:, 1].detach().numpy())
+            try:
+                temp_train_auc += roc_auc_score(
+                    train_y.numpy(), torch.exp(predictions)[:, 1].detach().numpy())
+            except ValueError:
+                temp_train_auc += 0.5
             
             optimizer.zero_grad()
             loss.backward()
@@ -116,7 +119,7 @@ def objective(trial):
 
 if __name__ == '__main__':
     study = optuna.create_study(direction='maximize')
-    study.optimize(objective, n_trials=100, timeout=1200, n_jobs=2)
+    study.optimize(objective, n_trials=100, timeout=12000, n_jobs=2)
 
     print("Number of finished trials: {}".format(len(study.trials)))
 
