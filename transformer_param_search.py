@@ -18,16 +18,18 @@ config.read('../ml_models_for_airflow/dbs3_config.ini')
 pairs_mapping = literal_eval(config['MODEL']['pairs_mapping'])
 pairs = tuple(pairs_mapping.values())
 
+GRAD_CLIPPING_VAL = 1.0
+
 def define_model(trial):
     """
     Define model structure
     """
 
-    seq_lenght = trial.suggest_int('seq_length', 5, 100)
+    seq_lenght = trial.suggest_int('seq_length', 3, 100)
 
     transformer = Transformer(
         emb=seq_lenght,
-        heads=trial.suggest_int('num_attention_heads', 2, 50),
+        heads=trial.suggest_int('num_attention_heads', 2, 20),
         depth=trial.suggest_int('num_transformer_blocks', 2, 50),
         num_classes=2,
         num_features=3,
@@ -56,7 +58,7 @@ def objective(trial):
                                      [train_set_size, test_set_size]
                                     )
     
-    batch_size = trial.suggest_int('batch_size', 16, 512)
+    batch_size = trial.suggest_int('batch_size', 16, 612)
 
     train_generator = data.DataLoader(
         trainset,
@@ -69,7 +71,7 @@ def objective(trial):
         shuffle=True,
         num_workers=1)
     
-    num_epochs = trial.suggest_int('num_epochs', 1, 60)
+    num_epochs = trial.suggest_int('num_epochs', 1, 50)
 
     # Generate the optimizers.
     optimizer_name = trial.suggest_categorical("optimizer", ["Adam", "RMSprop", "SGD"])
@@ -98,6 +100,9 @@ def objective(trial):
             
             optimizer.zero_grad()
             loss.backward()
+
+            nn.utils.clip_grad_norm(transformer.parameters(), GRAD_CLIPPING_VAL)
+
             optimizer.step()
         
         train_auc.append(temp_train_auc/len(train_generator))
