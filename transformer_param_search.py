@@ -110,7 +110,7 @@ def objective(trial):
         test_auc.append(temp_test_auc/len(test_generator))
 
         if ep % 5 == 0:
-            print('Epoch: {:03d}, Loss: {:.5f}'.format(ep, epoch_loss/ep))
+            print('Epoch: {:03d}, Loss: {:.5f}'.format(ep, epoch_loss/(ep+1)))
     
     return test_auc[-1]
 
