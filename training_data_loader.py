@@ -86,7 +86,7 @@ class Dataset(data.Dataset):
         # stack together
         for seq in sequence_indices:
             if len(seq[0]) == seq_lenght:
-                if not stacked:
+                if stacked is None:
                     stacked = input_data.query(
                         f"symbol == '{seq[1]}'")[['bidPrice', 'askPrice', 'bidQty/askQty']].iloc[seq[0]].values.reshape(
                             1, num_features, seq_lenght)
