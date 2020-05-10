@@ -65,9 +65,9 @@ def objective(trial):
         num_workers=2)
     test_generator = data.DataLoader(
         testset,
-        batch_size=batch_size,
+        batch_size=len(testset),
         shuffle=True,
-        num_workers=2)
+        num_workers=1)
     
     num_epochs = trial.suggest_int('num_epochs', 1, 60)
 
