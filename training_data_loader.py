@@ -81,10 +81,12 @@ class Dataset(data.Dataset):
 
         stacked_labels = []
 
+        stacked = None
+
         # stack together
-        for idx, seq in enumerate(sequence_indices):
+        for seq in sequence_indices:
             if len(seq[0]) == seq_lenght:
-                if idx == 0:
+                if not stacked:
                     stacked = input_data.query(
                         f"symbol == '{seq[1]}'")[['bidPrice', 'askPrice', 'bidQty/askQty']].iloc[seq[0]].values.reshape(
                             1, num_features, seq_lenght)
@@ -94,7 +96,7 @@ class Dataset(data.Dataset):
                     label_value = input_labels.query(f"index == '{temp_idx}'")[f"{seq[1]}_label"].values[0]
                     stacked_labels.append(label_value)
                     
-                else:
+                if stacked:
                     temp_len = len(input_data.query(
                         f"symbol == '{seq[1]}'")[['bidPrice', 'askPrice', 'bidQty/askQty']].iloc[seq[0]])
                     temp_stacked = input_data.query(
