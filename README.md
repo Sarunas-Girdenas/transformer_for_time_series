@@ -15,4 +15,4 @@ However, we've mostly used approach from Attend & Diagnose paper except that we 
 _Image taken from [here](https://towardsdatascience.com/attention-for-time-series-classification-and-forecasting-261723e0006d)._
 
 ## Sample Usecase
-TODO
+See `transformers_time_series.ipynb` for an example. 
