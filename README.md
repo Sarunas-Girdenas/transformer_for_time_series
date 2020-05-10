@@ -13,3 +13,6 @@ However, we've mostly used approach from Attend & Diagnose paper except that we 
 ![Architecture](https://miro.medium.com/max/1400/1*eZQZel7w-Ukp7oOtXuocJg.png)
 
 _Image taken from [here](https://towardsdatascience.com/attention-for-time-series-classification-and-forecasting-261723e0006d)._
+
+## Sample Usecase
+TODO
