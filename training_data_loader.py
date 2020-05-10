@@ -96,7 +96,7 @@ class Dataset(data.Dataset):
                     label_value = input_labels.query(f"index == '{temp_idx}'")[f"{seq[1]}_label"].values[0]
                     stacked_labels.append(label_value)
                     
-                if stacked:
+                if stacked is not None:
                     temp_len = len(input_data.query(
                         f"symbol == '{seq[1]}'")[['bidPrice', 'askPrice', 'bidQty/askQty']].iloc[seq[0]])
                     temp_stacked = input_data.query(
