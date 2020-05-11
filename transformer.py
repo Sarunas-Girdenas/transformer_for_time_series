@@ -64,6 +64,22 @@ class Transformer(nn.Module):
 
         return None
     
+    @staticmethod
+    def init_weights(layer):
+        """Purpose: initialize weights in each
+        LINEAR layer.
+        Input: pytorch layer
+        """
+
+        if isinstance(layer, torch.nn.Linear):
+            np.random.seed(42)
+            size = layer.weight.size()
+            fan_out = size[0] # number of rows
+            fan_in = size[1] # number of columns
+            variance = np.sqrt(2.0/(fan_in + fan_out))
+            # initialize weights
+            layer.weight.data.normal_(0.0, variance)
+        
     def forward(self, x):
         """
         Forward pass.

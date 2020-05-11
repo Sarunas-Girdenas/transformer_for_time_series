@@ -25,12 +25,12 @@ def define_model(trial):
     Define model structure
     """
 
-    seq_lenght = trial.suggest_int('seq_length', 3, 100)
+    seq_lenght = trial.suggest_int('seq_length', 2, 25)
 
     transformer = Transformer(
         emb=seq_lenght,
-        heads=trial.suggest_int('num_attention_heads', 2, 20),
-        depth=trial.suggest_int('num_transformer_blocks', 2, 50),
+        heads=trial.suggest_int('num_attention_heads', 1, 10),
+        depth=trial.suggest_int('num_transformer_blocks', 1, 10),
         num_classes=2,
         num_features=3,
         )
@@ -58,7 +58,7 @@ def objective(trial):
                                      [train_set_size, test_set_size]
                                     )
     
-    batch_size = trial.suggest_int('batch_size', 16, 612)
+    batch_size = trial.suggest_int('batch_size', 16, 64)
 
     train_generator = data.DataLoader(
         trainset,
@@ -71,7 +71,7 @@ def objective(trial):
         shuffle=True,
         num_workers=1)
     
-    num_epochs = trial.suggest_int('num_epochs', 1, 50)
+    num_epochs = trial.suggest_int('num_epochs', 1, 30)
 
     # Generate the optimizers.
     optimizer_name = trial.suggest_categorical("optimizer", ["Adam", "RMSprop", "SGD"])
@@ -101,7 +101,7 @@ def objective(trial):
             optimizer.zero_grad()
             loss.backward()
 
-            nn.utils.clip_grad_norm(transformer.parameters(), GRAD_CLIPPING_VAL)
+            torch.nn.utils.clip_grad_norm_(transformer.parameters(), GRAD_CLIPPING_VAL)
 
             optimizer.step()
         

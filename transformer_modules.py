@@ -85,6 +85,7 @@ class SelfAttention(nn.Module):
         """
         Masks out all values in the given batch of matrices where i <= j holds,
         i < j if mask_diagonal is false
+        Taken from: https://github.com/pbloem/former/blob/master/former/util/util.py
         In place operation
         :param tns:
         :return:
