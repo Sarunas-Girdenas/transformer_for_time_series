@@ -19,26 +19,39 @@ pairs_mapping = literal_eval(config['MODEL']['pairs_mapping'])
 pairs = tuple(pairs_mapping.values())
 
 GRAD_CLIPPING_VAL = 1.0
+TRAIN_SET_SIZE = 0.85
+SEQ_LENGTH = 16
+
+full_data_set = Dataset(
+    config_location='../ml_models_for_airflow/dbs3_config.ini',
+    pairs=pairs,
+    seq_lenght=SEQ_LENGTH,
+    num_features=3)
+
+train_set_size = int(len(full_data_set)*TRAIN_SET_SIZE)
+test_set_size = len(full_data_set) - train_set_size
+
+trainset, testset = data.random_split(full_data_set,
+                                    [train_set_size, test_set_size]
+                                )
 
 def define_model(trial):
     """
     Define model structure
     """
 
-    seq_lenght = trial.suggest_int('seq_length', 2, 20)
-
     transformer = Transformer(
-        emb=seq_lenght,
-        heads=trial.suggest_int('num_attention_heads', 1, 3),
-        depth=trial.suggest_int('num_transformer_blocks', 1, 3),
-        num_classes=2,
+        emb=SEQ_LENGTH,
+        heads=trial.suggest_int('num_attention_heads', 1, 5),
+        depth=trial.suggest_int('num_transformer_blocks', 1, 5),
         num_features=3,
+        interpolation_factor=trial.suggest_int('interpolation_factor', 1, 20),
         dropout=trial.suggest_uniform("dropout", 0.0, 0.5)
         )
-    
+
     transformer.apply(Transformer.init_weights)
 
-    return transformer, seq_lenght
+    return transformer
 
 def objective(trial):
     """
@@ -46,22 +59,9 @@ def objective(trial):
     and train the model.
     """
 
-    transformer, seq_lenght = define_model(trial)
+    transformer = define_model(trial)
 
-    full_data_set = Dataset(
-        config_location='../ml_models_for_airflow/dbs3_config.ini',
-        pairs=pairs,
-        seq_lenght=seq_lenght,
-        num_features=3)
-    
-    train_set_size = int(len(full_data_set)*0.85)
-    test_set_size = len(full_data_set) - train_set_size
-
-    trainset, testset = data.random_split(full_data_set,
-                                     [train_set_size, test_set_size]
-                                    )
-    
-    batch_size = trial.suggest_int('batch_size', 16, 128)
+    batch_size = trial.suggest_int('batch_size', 16, 512)
 
     train_generator = data.DataLoader(
         trainset,
@@ -73,8 +73,8 @@ def objective(trial):
         batch_size=len(testset),
         shuffle=True,
         num_workers=4)
-    
-    num_epochs = trial.suggest_int('num_epochs', 1, 50)
+
+    num_epochs = trial.suggest_int('num_epochs', 1, 70)
 
     # Generate the optimizers.
     optimizer_name = trial.suggest_categorical("optimizer", ["Adam", "RMSprop", "SGD"])
@@ -83,7 +83,7 @@ def objective(trial):
     learning_rate_scheduler = torch.optim.lr_scheduler.LambdaLR(
         optimizer, lambda i: min(i / (10.0 / batch_size), 1.0))
 
-    criterion = torch.nn.NLLLoss()
+    criterion = torch.nn.BCELoss()
     train_auc = []
     test_auc = []
 
@@ -95,11 +95,11 @@ def objective(trial):
         for train_x, train_y in train_generator:
             
             predictions = transformer(train_x)
-            loss = criterion(predictions, train_y)
+            loss = criterion(predictions, train_y.view(-1, 1))
             epoch_loss += loss.item()
             try:
                 temp_train_auc += roc_auc_score(
-                    train_y.numpy(), torch.exp(predictions)[:, 1].detach().numpy())
+                    train_y.numpy(), predictions.detach().numpy())
             except ValueError:
                 temp_train_auc += 0.5
             
@@ -119,7 +119,7 @@ def objective(trial):
             for test_x, test_y in test_generator:
                 predictions = transformer(test_x)
                 temp_test_auc += roc_auc_score(
-                    test_y.numpy(), torch.exp(predictions)[:, 1].numpy())
+                    test_y.numpy(), predictions.numpy())
 
         test_auc.append(temp_test_auc/len(test_generator))
 
