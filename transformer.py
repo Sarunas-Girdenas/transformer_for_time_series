@@ -1,16 +1,18 @@
+import numpy as np
 import torch
 from torch import nn
 import torch.nn.functional as F
 
-from transformer_modules import TransformerBlock
+from transformer_modules import TransformerBlock, DenseInterpolation
 
 class Transformer(nn.Module):
 
     def __init__(self, emb: int, heads: int,
-                 depth: int, num_classes: int,
-                 num_features: int, max_pool: bool=True,
+                 depth: int,
+                 num_features: int,
+                 interpolation_factor: int=3,
                  dropout: float=0.0,
-                 mask=True):
+                 mask: bool=True):
         """
         Transformer for time series.
         Inputs:
@@ -28,7 +30,7 @@ class Transformer(nn.Module):
 
         super().__init__()
 
-        self.max_pool = max_pool
+        self.num_features, self.interpolation_factor = num_features, interpolation_factor
 
         # 1D Conv for actual values of time series
         self.time_series_features_encoding = nn.Conv1d(
@@ -57,8 +59,17 @@ class Transformer(nn.Module):
         # transformer blocks put together
         self.transformer_blocks = nn.Sequential(*tblocks)
 
-        # reduce back to number of classes (classifier)
-        self.reduce_to_probabilities = nn.Linear(emb, num_classes)
+        # dense interpolation layer
+        self.dense_interpolation = DenseInterpolation(
+            seq_lenght=emb,
+            factor=interpolation_factor
+            )
+        
+        # feed forward layer to reduce interpolated layers to probability
+        self.feed_forward = torch.nn.Linear(
+            int(interpolation_factor*num_features),
+            1
+            )
 
         self.dropout = nn.Dropout(dropout)
 
@@ -98,8 +109,10 @@ class Transformer(nn.Module):
 
         x = self.transformer_blocks(x)
 
-        x = x.max(dim=1)[0] if self.max_pool else x.mean(dim=1)
+        x = self.dense_interpolation(x.transpose(dim0=1, dim1=-1))
 
-        x = self.reduce_to_probabilities(x)
+        x = x.contiguous().view(-1, int(self.num_features*self.interpolation_factor))
 
-        return F.log_softmax(x, dim=1)
+        x = self.feed_forward(x)
+
+        return torch.sigmoid(x)

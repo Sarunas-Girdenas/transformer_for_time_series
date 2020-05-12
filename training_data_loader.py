@@ -7,6 +7,8 @@ from numpy import array_split, concatenate
 from random import shuffle
 from itertools import product
 
+from sklearn.preprocessing import MinMaxScaler
+
 class Dataset(data.Dataset):
     """
     Loads data from DB
@@ -44,6 +46,13 @@ class Dataset(data.Dataset):
 
         book_data['bidQty/askQty'] = book_data['bidQty'] / (book_data['bidQty'] + book_data['askQty'])
         book_data.drop(['bidQty', 'askQty'], inplace=True, axis=1)
+
+        scaler = MinMaxScaler()
+        book_data['askPrice'] = scaler.fit_transform(book_data['askPrice'].values.reshape(-1, 1))
+        scaler = MinMaxScaler()
+        book_data['bidPrice'] = scaler.fit_transform(book_data['bidPrice'].values.reshape(-1, 1))
+        scaler = MinMaxScaler()
+        book_data['bidQty/askQty'] = scaler.fit_transform(book_data['bidQty/askQty'].values.reshape(-1, 1))
 
         self.labels = Dataset._compute_labels(data=book_data, pairs=pairs, columns=('bidPrice', 'askPrice'))
 
@@ -171,6 +180,6 @@ class Dataset(data.Dataset):
         """
 
         x = torch.tensor(self.stacked_sequences).float()[index]
-        y = torch.tensor(self.stacked_labels).long()[index]
+        y = torch.tensor(self.stacked_labels).float()[index]
 
         return x, y

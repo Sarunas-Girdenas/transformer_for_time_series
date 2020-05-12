@@ -25,15 +25,18 @@ def define_model(trial):
     Define model structure
     """
 
-    seq_lenght = trial.suggest_int('seq_length', 2, 25)
+    seq_lenght = trial.suggest_int('seq_length', 2, 20)
 
     transformer = Transformer(
         emb=seq_lenght,
-        heads=trial.suggest_int('num_attention_heads', 1, 10),
-        depth=trial.suggest_int('num_transformer_blocks', 1, 10),
+        heads=trial.suggest_int('num_attention_heads', 1, 3),
+        depth=trial.suggest_int('num_transformer_blocks', 1, 3),
         num_classes=2,
         num_features=3,
+        dropout=trial.suggest_uniform("dropout", 0.0, 0.5)
         )
+    
+    transformer.apply(Transformer.init_weights)
 
     return transformer, seq_lenght
 
@@ -58,25 +61,27 @@ def objective(trial):
                                      [train_set_size, test_set_size]
                                     )
     
-    batch_size = trial.suggest_int('batch_size', 16, 64)
+    batch_size = trial.suggest_int('batch_size', 16, 128)
 
     train_generator = data.DataLoader(
         trainset,
         batch_size=batch_size,
         shuffle=True,
-        num_workers=2)
+        num_workers=4)
     test_generator = data.DataLoader(
         testset,
         batch_size=len(testset),
         shuffle=True,
-        num_workers=1)
+        num_workers=4)
     
-    num_epochs = trial.suggest_int('num_epochs', 1, 30)
+    num_epochs = trial.suggest_int('num_epochs', 1, 50)
 
     # Generate the optimizers.
     optimizer_name = trial.suggest_categorical("optimizer", ["Adam", "RMSprop", "SGD"])
     lr = trial.suggest_loguniform("learning_rate", 1e-5, 1e-1)
     optimizer = getattr(optim, optimizer_name)(transformer.parameters(), lr=lr)
+    learning_rate_scheduler = torch.optim.lr_scheduler.LambdaLR(
+        optimizer, lambda i: min(i / (10.0 / batch_size), 1.0))
 
     criterion = torch.nn.NLLLoss()
     train_auc = []
@@ -104,6 +109,7 @@ def objective(trial):
             torch.nn.utils.clip_grad_norm_(transformer.parameters(), GRAD_CLIPPING_VAL)
 
             optimizer.step()
+            learning_rate_scheduler.step()
         
         train_auc.append(temp_train_auc/len(train_generator))
         
@@ -124,7 +130,7 @@ def objective(trial):
 
 if __name__ == '__main__':
     study = optuna.create_study(direction='maximize')
-    study.optimize(objective, n_trials=100, timeout=12000, n_jobs=2)
+    study.optimize(objective, n_trials=100, timeout=12000, n_jobs=1)
 
     print("Number of finished trials: {}".format(len(study.trials)))
 

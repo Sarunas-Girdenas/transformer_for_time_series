@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
+import numpy as np
 
 class SelfAttention(nn.Module):
 
@@ -151,3 +152,41 @@ class TransformerBlock(nn.Module):
         x = self.dropout(x)
 
         return x
+
+class DenseInterpolation(nn.Module):
+
+    def __init__(self, seq_lenght: int, factor: int):
+        """
+        :param seq_len: sequence length
+        :param factor: factor M (for interpolation)
+        Code taken from: https://github.com/khirotaka/SAnD/blob/master/core/modules.py
+        Formula below is from Algorithm 1 from Attend & Diagnose paper
+        """
+        
+        super(DenseInterpolation, self).__init__()
+
+        W = np.zeros((factor, seq_lenght), dtype=np.float32)
+
+        for t in range(seq_lenght):
+            s = np.array((factor * (t + 1)) / seq_lenght, dtype=np.float32)
+            for m in range(factor):
+                tmp = np.array(1 - (np.abs(s - (1+m)) / factor), dtype=np.float32)
+                w = np.power(tmp, 2, dtype=np.float32)
+                W[m, t] = w
+
+        W = torch.tensor(W).float().unsqueeze(0)
+
+        self.register_buffer("W", W)
+        
+        return None
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Multiply interpolation weights by input from
+        Transformer
+        """
+        
+        w = self.W.repeat(x.shape[0], 1, 1).requires_grad_(False)
+        u = torch.bmm(w, x)
+        
+        return u.transpose_(1, 2)
