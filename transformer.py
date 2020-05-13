@@ -10,7 +10,7 @@ class Transformer(nn.Module):
     def __init__(self, emb: int, heads: int,
                  depth: int,
                  num_features: int,
-                 interpolation_factor: int=3,
+                 num_out_channels_emb: int=3,
                  dropout: float=0.0,
                  mask: bool=True):
         """
@@ -21,16 +21,13 @@ class Transformer(nn.Module):
         heads (int): Number of attention heads
         depth (int): Number of transformer blocks
         seq_length (int): length of the sequence
-        num_classes (int): number of classes
         num_features (int): number of time series features
-        max_pool (bool): if true, use global max pooling in the last layer,
-            else use global average pooling
         mask (bool): if mask diagonal
         """
 
         super().__init__()
 
-        self.num_features, self.interpolation_factor = num_features, interpolation_factor
+        self.num_features = num_features
 
         # 1D Conv for actual values of time series
         self.time_series_features_encoding = nn.Conv1d(
@@ -59,15 +56,17 @@ class Transformer(nn.Module):
         # transformer blocks put together
         self.transformer_blocks = nn.Sequential(*tblocks)
 
-        # dense interpolation layer
-        self.dense_interpolation = DenseInterpolation(
-            seq_lenght=emb,
-            factor=interpolation_factor
-            )
+        # conv1d for embeddings
+        self.conv1d_for_embeddings = nn.Conv1d(
+            in_channels=num_features,
+            out_channels=num_out_channels_emb,
+            kernel_size=1,
+            bias=False
+        )
         
-        # feed forward layer to reduce interpolated layers to probability
+        # feed forward through maxpooled embeddings to reduce them to probability
         self.feed_forward = torch.nn.Linear(
-            int(interpolation_factor*num_features),
+            emb,
             1
             )
 
@@ -109,9 +108,10 @@ class Transformer(nn.Module):
 
         x = self.transformer_blocks(x)
 
-        x = self.dense_interpolation(x.transpose(dim0=1, dim1=-1))
+        x = self.conv1d_for_embeddings(x)
 
-        x = x.contiguous().view(-1, int(self.num_features*self.interpolation_factor))
+        # maxpool
+        x = x.max(dim=1)[0]
 
         x = self.feed_forward(x)
 

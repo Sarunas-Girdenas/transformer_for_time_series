@@ -16,7 +16,8 @@ class Dataset(data.Dataset):
 
     def __init__(self, config_location: str,
                  pairs: tuple, seq_lenght: int,
-                 num_features: int):
+                 num_features: int,
+                 local_path: str=None):
         """
         Load config file with DB connections
         Inputs:
@@ -26,15 +27,19 @@ class Dataset(data.Dataset):
         seq_length (int): lenght of sequence to use for training
         num_features (int): number of features to use
         """
-        
+
         config = configparser.ConfigParser()
         config.read(config_location)
 
-        db_engine = create_engine(config['AIRFLOW']['postgres_conn'])
+        if local_path is None:
+            db_engine = create_engine(config['AIRFLOW']['postgres_conn'])
 
-        book_data = pd.read_sql(
-            f"select * from current_book where symbol in {tuple(pairs)}", db_engine)
-        db_engine.dispose()
+            book_data = pd.read_sql(
+                f"select * from current_book where symbol in {tuple(pairs)}", db_engine)
+            db_engine.dispose()
+        
+        if local_path is not None:
+            book_data = pd.read_csv(local_path)
 
         # load data from DB
         book_data['askPrice'] = book_data['askPrice'].astype(float)

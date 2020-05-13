@@ -20,38 +20,27 @@ pairs = tuple(pairs_mapping.values())
 
 GRAD_CLIPPING_VAL = 1.0
 TRAIN_SET_SIZE = 0.85
-SEQ_LENGTH = 16
-
-full_data_set = Dataset(
-    config_location='../ml_models_for_airflow/dbs3_config.ini',
-    pairs=pairs,
-    seq_lenght=SEQ_LENGTH,
-    num_features=3)
-
-train_set_size = int(len(full_data_set)*TRAIN_SET_SIZE)
-test_set_size = len(full_data_set) - train_set_size
-
-trainset, testset = data.random_split(full_data_set,
-                                    [train_set_size, test_set_size]
-                                )
+SEQ_LENGTH = 25
 
 def define_model(trial):
     """
     Define model structure
     """
 
+    seq_length = trial.suggest_int('seq_length', 16, 200)
+
     transformer = Transformer(
-        emb=SEQ_LENGTH,
-        heads=trial.suggest_int('num_attention_heads', 1, 5),
-        depth=trial.suggest_int('num_transformer_blocks', 1, 5),
+        emb=seq_length,
+        heads=trial.suggest_int('num_attention_heads', 1, 16),
+        depth=trial.suggest_int('num_transformer_blocks', 1, 18),
         num_features=3,
-        interpolation_factor=trial.suggest_int('interpolation_factor', 1, 20),
+        num_out_channels_emb=trial.suggest_int('num_out_channels_emb', 1, 100),
         dropout=trial.suggest_uniform("dropout", 0.0, 0.5)
         )
 
     transformer.apply(Transformer.init_weights)
 
-    return transformer
+    return transformer, seq_length
 
 def objective(trial):
     """
@@ -59,9 +48,23 @@ def objective(trial):
     and train the model.
     """
 
-    transformer = define_model(trial)
+    transformer, seq_length = define_model(trial)
 
-    batch_size = trial.suggest_int('batch_size', 16, 512)
+    full_data_set = Dataset(
+    config_location='../ml_models_for_airflow/dbs3_config.ini',
+    pairs=pairs,
+    seq_lenght=seq_length,
+    num_features=3,
+    local_path='book_data_raw.csv')
+
+    train_set_size = int(len(full_data_set)*TRAIN_SET_SIZE)
+    test_set_size = len(full_data_set) - train_set_size
+
+    trainset, testset = data.random_split(full_data_set,
+                                        [train_set_size, test_set_size]
+                                    )
+
+    batch_size = trial.suggest_int('batch_size', 16, 300)
 
     train_generator = data.DataLoader(
         trainset,
@@ -74,7 +77,7 @@ def objective(trial):
         shuffle=True,
         num_workers=4)
 
-    num_epochs = trial.suggest_int('num_epochs', 1, 70)
+    num_epochs = trial.suggest_int('num_epochs', 3, 150)
 
     # Generate the optimizers.
     optimizer_name = trial.suggest_categorical("optimizer", ["Adam", "RMSprop", "SGD"])
