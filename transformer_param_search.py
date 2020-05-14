@@ -27,14 +27,14 @@ def define_model(trial):
     Define model structure
     """
 
-    seq_length = trial.suggest_int('seq_length', 16, 200)
+    seq_length = trial.suggest_int('seq_length', 30, 200)
 
     transformer = Transformer(
         emb=seq_length,
         heads=trial.suggest_int('num_attention_heads', 1, 16),
         depth=trial.suggest_int('num_transformer_blocks', 1, 18),
-        num_features=3,
-        num_out_channels_emb=trial.suggest_int('num_out_channels_emb', 1, 100),
+        num_features=2,
+        num_out_channels_emb=trial.suggest_int('num_out_channels_emb', 1, 200),
         dropout=trial.suggest_uniform("dropout", 0.0, 0.5)
         )
 
@@ -54,7 +54,7 @@ def objective(trial):
     config_location='../ml_models_for_airflow/dbs3_config.ini',
     pairs=pairs,
     seq_lenght=seq_length,
-    num_features=3,
+    num_features=2,
     local_path='book_data_raw.csv')
 
     train_set_size = int(len(full_data_set)*TRAIN_SET_SIZE)

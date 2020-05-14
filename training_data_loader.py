@@ -102,7 +102,7 @@ class Dataset(data.Dataset):
             if len(seq[0]) == seq_lenght:
                 if stacked is None:
                     stacked = input_data.query(
-                        f"symbol == '{seq[1]}'")[['bidPrice', 'askPrice', 'bidQty/askQty']].iloc[seq[0]].values.reshape(
+                        f"symbol == '{seq[1]}'")[['bidPrice', 'askPrice']].iloc[seq[0]].values.reshape(
                             1, num_features, seq_lenght)
                     # label index
                     temp_idx = input_data.query(f"symbol == '{seq[1]}'").iloc[seq[0][-1]].name
@@ -112,9 +112,9 @@ class Dataset(data.Dataset):
                     
                 if stacked is not None:
                     temp_len = len(input_data.query(
-                        f"symbol == '{seq[1]}'")[['bidPrice', 'askPrice', 'bidQty/askQty']].iloc[seq[0]])
+                        f"symbol == '{seq[1]}'")[['bidPrice', 'askPrice']].iloc[seq[0]])
                     temp_stacked = input_data.query(
-                        f"symbol == '{seq[1]}'")[['bidPrice', 'askPrice', 'bidQty/askQty']].iloc[seq[0]].values.reshape(
+                        f"symbol == '{seq[1]}'")[['bidPrice', 'askPrice']].iloc[seq[0]].values.reshape(
                             1, num_features, temp_len)
                     stacked = concatenate([stacked, temp_stacked])
                     # label index
