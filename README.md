@@ -8,7 +8,7 @@ Given sequence of time series, determine to which class it belongs. In the finan
 ## Approach
 Instead of using something like LSTM, RNN or TCN, we've decided to build Transformer. To start with, [Medium](https://towardsdatascience.com/attention-for-time-series-classification-and-forecasting-261723e0006d) has a great review of various methods.
 
-We've mostly used approach from Attend & Diagnose paper; Dense Interpolation is taken from [here](https://github.com/khirotaka/SAnD/blob/master/core/modules.py). See chart below for very high level archicture overview:
+We've mostly used approach from Attend & Diagnose paper; Dense Interpolation is taken from [here](https://github.com/khirotaka/SAnD/blob/master/core/modules.py). However, in this case 1D Convolution and _maxpool_ worked better than Dense Interpolation. See chart below for very high level archicture overview:
 
 ![Architecture](https://miro.medium.com/max/1400/1*eZQZel7w-Ukp7oOtXuocJg.png)
 
